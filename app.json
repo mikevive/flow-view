@@ -28,6 +28,12 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "b7c4e236-ef02-4ecb-b385-0ec12ca76ab4"
+      }
+    },
+    "owner": "mikevive"
   }
 }
