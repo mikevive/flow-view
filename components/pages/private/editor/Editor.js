@@ -1,11 +1,5 @@
 import { useState, useRef, createContext, Fragment, useContext } from 'react';
-import {
-  StyleSheet,
-  Text,
-  View,
-  TouchableOpacity,
-  ScrollView,
-} from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
 import { Entypo } from '@expo/vector-icons';
 import { useHover } from 'react-native-web-hooks';
 
@@ -14,29 +8,91 @@ const PROJECT_KEY = 'FLOW';
 const Context = createContext();
 
 export default function Editor() {
-  const [taskList, setTaskList] = useState([]);
-  const [taskCounter, setTaskCounter] = useState(0);
+  const [flow, setFlow] = useState([
+    [
+      {
+        id: 0,
+        type: 'MAIN',
+        title: 'Start',
+        description: '',
+        next: [],
+      },
+      {
+        id: -1,
+        type: 'MAIN',
+        title: 'Start',
+        description: '',
+        next: [],
+      },
+      {
+        id: -4,
+        type: 'MAIN',
+        title: 'Start',
+        description: '',
+        next: [],
+      },
+    ],
+    [
+      {
+        id: 1,
+        type: 'MAIN',
+        title: 'End',
+        description: '',
+        next: null,
+      },
+      {
+        id: -2,
+        type: 'MAIN',
+        title: 'End',
+        description: '',
+        next: null,
+      },
+      {
+        id: -3,
+        type: 'MAIN',
+        title: 'End',
+        description: '',
+        next: null,
+      },
+    ],
+  ]);
+  const [taskCounter, setTaskCounter] = useState(1);
   const [selectedTask, setSelectedTask] = useState(null);
 
-  const addTaskToList = (parentTaskId) => {
+  const addTaskToList = (parentBlockId) => {
     const id = increaseTaskCounter();
     const newTask = {
       id: id,
+      type: 'DEFAULT',
       title: '',
       description: '',
+      next: [],
     };
-    if (!parentTaskId) {
-      const newList = [newTask, ...taskList];
-      setTaskList(newList);
+
+    const { parentRowIndex, parentColumnIndex } = [...flow].reduce(
+      (acum, row, rowIndex, array) => {
+        const columnIndex = row.findIndex(
+          (block) => block?.id === parentBlockId
+        );
+        if (columnIndex !== -1) {
+          array.splice(1); // eject early
+          acum = { parentRowIndex: rowIndex, parentColumnIndex: columnIndex };
+          return acum;
+        }
+      },
+      null
+    );
+
+    const newTaskIndex = parentRowIndex + 1;
+    const newFlow = [...flow];
+    if (newFlow[parentRowIndex + 1][parentColumnIndex]) {
+      const newRow = Array.apply(null, Array(flow[0].length)).map(() => null);
+      newRow.splice(parentColumnIndex, 1, newTask);
+      newFlow.splice(newTaskIndex, 0, newRow);
     } else {
-      const parentTaskIndex = taskList.findIndex(
-        (task) => task.id === parentTaskId
-      );
-      const newTaskIndex = parentTaskIndex + 1;
-      const newList = [...taskList];
-      newList.splice(newTaskIndex, 0, newTask);
-      setTaskList(newList);
+      newFlow[parentRowIndex + 1][parentColumnIndex] = newTask;
     }
+    setFlow(newFlow);
     setSelectedTask(newTask);
   };
 
@@ -48,15 +104,27 @@ export default function Editor() {
 
   const updateTask = (id, task) => {
     const newTask = { ...selectedTask, ...task };
-    const taskIndex = taskList.findIndex((task) => task.id === id);
-    const newList = [...taskList];
-    newList.splice(taskIndex, 1, newTask);
-    setTaskList(newList);
+
+    const { rowIndex, columnIndex } = [...flow].reduce(
+      (acum, row, rowIndex, array) => {
+        const columnIndex = row.findIndex((block) => block?.id === id);
+        if (columnIndex !== -1) {
+          array.splice(1); // eject early
+          acum = { rowIndex: rowIndex, columnIndex: columnIndex };
+          return acum;
+        }
+      },
+      null
+    );
+
+    const newFlow = [...flow];
+    newFlow[rowIndex].splice(columnIndex, 1, newTask);
+    setFlow(newFlow);
     setSelectedTask(newTask);
   };
 
   const initialContextValue = {
-    taskList: taskList,
+    flow: flow,
     addTaskToList: addTaskToList,
     selectedTask: selectedTask,
     setSelectedTask: setSelectedTask,
@@ -68,38 +136,54 @@ export default function Editor() {
       <View style={styles.header}></View>
       <View style={styles.navigation}></View>
       <View style={styles.aside}>
-        <HorizontalLine></HorizontalLine>
-        {selectedTask && <AsideInput></AsideInput>}
+        {selectedTask && (
+          <Fragment>
+            <HorizontalLine></HorizontalLine>
+            <AsideInput></AsideInput>
+          </Fragment>
+        )}
       </View>
-      <ScrollView
-        contentContainerStyle={styles.workspace}
+      <TouchableOpacity
+        style={styles.workspace}
         activeOpacity={1}
         onPress={() => setSelectedTask(null)}
       >
-        <View style={[styles.task, styles.task.main]}>
-          <Text style={[styles.task.title]}>Start</Text>
-        </View>
-        <Line />
-
         <Flow />
-
-        <View style={[styles.task, styles.task.main]}>
-          <Text style={[styles.task.title]}>End</Text>
-        </View>
-      </ScrollView>
+      </TouchableOpacity>
     </Context.Provider>
   );
 }
 
 function Flow() {
-  const { taskList } = useContext(Context);
+  const { flow } = useContext(Context);
 
-  return taskList.map((task) => (
-    <Fragment key={task.id}>
-      <Task {...task} />
-      <Line id={task.id} />
-    </Fragment>
+  return flow.map((row, index) => (
+    <View
+      key={index}
+      style={{
+        display: 'flex',
+        flexDirection: 'row',
+        marginRight: 'auto',
+      }}
+    >
+      {row.map((block, index) => (
+        <View key={index} style={{ marginLeft: 50, marginRight: 50 }}>
+          {!block && <None />}
+          {block?.type === 'DEFAULT' && <Task {...block} />}
+          {block?.type === 'MAIN' && <Main {...block} />}
+          {block?.next && <Line blockId={block.id} />}
+        </View>
+      ))}
+    </View>
   ));
+}
+
+function Main(props) {
+  return (
+    <View style={[styles.block, , styles.block.main]}>
+      <Text style={[styles.block.title]}>{props.title}</Text>
+    </View>
+  );
 }
 
 function Task(props) {
@@ -107,15 +191,22 @@ function Task(props) {
 
   return (
     <TouchableOpacity
-      style={[styles.task, props.id === selectedTask.id && styles.task.active]}
+      style={[
+        styles.block,
+        props.id === selectedTask?.id && styles.block.active,
+      ]}
       onPress={() => setSelectedTask(props)}
     >
-      <Text style={[styles.task.title]}>{props.title || 'Untitled'}</Text>
-      <Text style={styles.task.description}>
+      <Text style={[styles.block.title]}>{props.title || 'Untitled'}</Text>
+      <Text style={styles.block.description}>
         {props.description || 'Add a Description'}
       </Text>
     </TouchableOpacity>
   );
+}
+
+function None() {
+  return <View style={[styles.block, styles.block.none]}></View>;
 }
 
 function Line(props) {
@@ -145,7 +236,7 @@ function Line(props) {
             isHoverAreaHovered && styles.line.hoverArea.add.visible,
             isIconHovered && styles.line.hoverArea.add.hover,
           ]}
-          onPress={() => addTaskToList(props.id)}
+          onPress={() => addTaskToList(props.blockId)}
         >
           <Entypo
             name={'plus'}
@@ -165,23 +256,21 @@ function HorizontalLine() {
 }
 
 function AsideInput() {
+  const { selectedTask, updateTask } = useContext(Context);
+
   return (
-    <Context.Consumer>
-      {({ selectedTask, updateTask }) => (
-        <View>
-          <Text style={[styles.aside.title]}>TASK TITLE</Text>
-          <input
-            type="text"
-            style={styles.aside.field}
-            value={selectedTask.title}
-            placeholder="Untitled"
-            onChange={(event) =>
-              updateTask(selectedTask.id, { title: event.target.value })
-            }
-          />
-        </View>
-      )}
-    </Context.Consumer>
+    <View>
+      <Text style={[styles.aside.title]}>TASK TITLE</Text>
+      <input
+        type="text"
+        style={styles.aside.field}
+        value={selectedTask.title}
+        placeholder="Untitled"
+        onChange={(event) =>
+          updateTask(selectedTask.id, { title: event.target.value })
+        }
+      />
+    </View>
   );
 }
 
@@ -189,12 +278,14 @@ const styles = StyleSheet.create({
   workspace: {
     display: 'flex',
     width: 'calc(100vw - 350px)',
+    height: 'calc(100vh - 50px)',
     marginLeft: 50,
-    alignItems: 'center',
+    marginTop: 50,
     justifyContent: 'flex-start',
     backgroundColor: '#0D0E10',
     padding: 100,
     cursor: 'default',
+    overflow: 'auto',
   },
   header: {
     position: 'fixed',
@@ -242,16 +333,16 @@ const styles = StyleSheet.create({
       backgroundColor: 'transparent',
     },
   },
-  task: {
+  block: {
     padding: 10,
     borderRadius: 5,
-    fontSize: 12,
+    width: 250,
     backgroundColor: '#868B9B',
     cursor: 'pointer',
     color: '#000',
     active: {
       outline: 'solid 3px #2D26B4',
-      outlineOffset: '-3px',
+      outlineOffset: -3,
       backgroundColor: '#504BB4',
       color: '#fff',
     },
@@ -266,22 +357,29 @@ const styles = StyleSheet.create({
     main: {
       backgroundColor: '#2D26B4',
       color: '#fff',
+      cursor: 'default',
+    },
+    none: {
+      backgroundColor: 'none',
+      cursor: 'default',
     },
   },
   line: {
     position: 'relative',
     display: 'flex',
+    flex: 1,
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    height: 50,
+    minHeight: 50,
     zIndex: 1000,
-    transitionProperty: 'height',
+    transitionProperty: 'min-height',
     transitionDuration: '250ms',
     hover: {
-      height: 100,
+      minHeight: 100,
     },
     trunk: {
+      position: 'absolute',
       backgroundColor: '#2D26B4',
       height: '100%',
       width: 2,
@@ -298,7 +396,7 @@ const styles = StyleSheet.create({
       borderStyle: 'solid',
       borderColor: '#2D26B4',
       bottom: {
-        top: 'calc(100% - 5px)',
+        bottom: -5,
       },
       top: {
         top: -5,
