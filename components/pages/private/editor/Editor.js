@@ -15,21 +15,7 @@ export default function Editor() {
         type: 'MAIN',
         title: 'Start',
         description: '',
-        next: [],
-      },
-      {
-        id: -1,
-        type: 'MAIN',
-        title: 'Start',
-        description: '',
-        next: [],
-      },
-      {
-        id: -4,
-        type: 'MAIN',
-        title: 'Start',
-        description: '',
-        next: [],
+        next: [1],
       },
     ],
     [
@@ -38,62 +24,134 @@ export default function Editor() {
         type: 'MAIN',
         title: 'End',
         description: '',
-        next: null,
-      },
-      {
-        id: -2,
-        type: 'MAIN',
-        title: 'End',
-        description: '',
-        next: null,
-      },
-      {
-        id: -3,
-        type: 'MAIN',
-        title: 'End',
-        description: '',
-        next: null,
+        next: [],
       },
     ],
   ]);
   const [taskCounter, setTaskCounter] = useState(1);
   const [selectedTask, setSelectedTask] = useState(null);
 
-  const addTaskToList = (parentBlockId) => {
+  const addTaskLeft = (parentBlockId) => {
     const id = increaseTaskCounter();
     const newTask = {
       id: id,
       type: 'DEFAULT',
       title: '',
       description: '',
-      next: [],
+      next: [1],
     };
 
-    const { parentRowIndex, parentColumnIndex } = [...flow].reduce(
-      (acum, row, rowIndex, array) => {
-        const columnIndex = row.findIndex(
+    const { parent, parentRowIndex, parentColumnIndex } = [...flow].reduce(
+      (acum, row, parentRowIndex, array) => {
+        const parent = row.find((block) => block?.id === parentBlockId);
+        const parentColumnIndex = row.findIndex(
           (block) => block?.id === parentBlockId
         );
-        if (columnIndex !== -1) {
+        if (parentColumnIndex !== -1) {
           array.splice(1); // eject early
-          acum = { parentRowIndex: rowIndex, parentColumnIndex: columnIndex };
+          acum = {
+            parent: parent,
+            parentRowIndex: parentRowIndex,
+            parentColumnIndex: parentColumnIndex,
+          };
           return acum;
         }
       },
       null
     );
 
-    const newTaskIndex = parentRowIndex + 1;
+    const newTaskRowIndex = parentRowIndex + 1;
     const newFlow = [...flow];
-    if (newFlow[parentRowIndex + 1][parentColumnIndex]) {
-      const newRow = Array.apply(null, Array(flow[0].length)).map(() => null);
-      newRow.splice(parentColumnIndex, 1, newTask);
-      newFlow.splice(newTaskIndex, 0, newRow);
-    } else {
-      newFlow[parentRowIndex + 1][parentColumnIndex] = newTask;
-    }
+    newFlow.forEach((row, index) => {
+      const task = newTaskRowIndex === index ? newTask : null;
+      row.splice(parentColumnIndex, 0, task);
+    });
+
+    setFlow(newFlow);
+    setSelectedTask(null);
+  };
+
+  const addTaskDown = (parentBlockId) => {
+    const newTaskId = increaseTaskCounter();
+
+    const { parent, parentRowIndex, parentColumnIndex } = [...flow].reduce(
+      (acum, row, parentRowIndex, array) => {
+        const parent = row.find((block) => block?.id === parentBlockId);
+        const parentColumnIndex = row.findIndex(
+          (block) => block?.id === parentBlockId
+        );
+        if (parentColumnIndex !== -1) {
+          array.splice(1); // eject early
+          acum = {
+            parent: parent,
+            parentRowIndex: parentRowIndex,
+            parentColumnIndex: parentColumnIndex,
+          };
+          return acum;
+        }
+      },
+      null
+    );
+
+    const newTask = {
+      id: newTaskId,
+      type: 'DEFAULT',
+      title: '',
+      description: '',
+      next: [...parent.next],
+    };
+
+    parent.next = [newTaskId];
+
+    console.log(parentRowIndex, parentColumnIndex);
+
+    const newTaskRowIndex = parentRowIndex + 1;
+    const newFlow = [...flow];
+    const newRow = Array.apply(null, Array(flow[0].length)).map(() => null);
+    newRow.splice(parentColumnIndex, 1, newTask);
+    newFlow.splice(newTaskRowIndex, 0, newRow);
     setFlow(newFlow);
     setSelectedTask(newTask);
+  };
+
+  const addTaskRight = (parentBlockId) => {
+    const id = increaseTaskCounter();
+    const newTask = {
+      id: id,
+      type: 'DEFAULT',
+      title: '',
+      description: '',
+      next: [1],
+    };
+
+    const { parent, parentRowIndex, parentColumnIndex } = [...flow].reduce(
+      (acum, row, parentRowIndex, array) => {
+        const parent = row.find((block) => block?.id === parentBlockId);
+        const parentColumnIndex = row.findIndex(
+          (block) => block?.id === parentBlockId
+        );
+        if (parentColumnIndex !== -1) {
+          array.splice(1); // eject early
+          acum = {
+            parent: parent,
+            parentRowIndex: parentRowIndex,
+            parentColumnIndex: parentColumnIndex,
+          };
+          return acum;
+        }
+      },
+      null
+    );
+
+    const newTaskRowIndex = parentRowIndex + 1;
+    const newFlow = [...flow];
+    newFlow.forEach((row, index) => {
+      const task = newTaskRowIndex === index ? newTask : null;
+      row.splice(parentColumnIndex + 1, 0, task);
+    });
+
+    setFlow(newFlow);
+    setSelectedTask(null);
   };
 
   const increaseTaskCounter = () => {
@@ -125,7 +183,9 @@ export default function Editor() {
 
   const initialContextValue = {
     flow: flow,
-    addTaskToList: addTaskToList,
+    addTaskLeft: addTaskLeft,
+    addTaskDown: addTaskDown,
+    addTaskRight: addTaskRight,
     selectedTask: selectedTask,
     setSelectedTask: setSelectedTask,
     updateTask: updateTask,
@@ -163,7 +223,7 @@ function Flow() {
       style={{
         display: 'flex',
         flexDirection: 'row',
-        marginRight: 'auto',
+        margin: '0 auto',
       }}
     >
       {row.map((block, index) => (
@@ -171,7 +231,7 @@ function Flow() {
           {!block && <None />}
           {block?.type === 'DEFAULT' && <Task {...block} />}
           {block?.type === 'MAIN' && <Main {...block} />}
-          {block?.next && <Line blockId={block.id} />}
+          {block?.next.length && <Line block={block} />}
         </View>
       ))}
     </View>
@@ -212,10 +272,20 @@ function None() {
 function Line(props) {
   const hoverAreaRef = useRef(null);
   const isHoverAreaHovered = useHover(hoverAreaRef);
-  const iconRef = useRef(null);
-  const isIconHovered = useHover(iconRef);
+  const plusIconRef = useRef(null);
+  const isPlusIconHovered = useHover(plusIconRef);
+  const leftIconRef = useRef(null);
+  const isLeftIconHovered = useHover(leftIconRef);
+  const righIconRef = useRef(null);
+  const isRightIconHovered = useHover(righIconRef);
 
-  const { addTaskToList } = useContext(Context);
+  const { addTaskLeft, addTaskDown, addTaskRight } = useContext(Context);
+
+  const isParentBlock =
+    props.block.next.length > 1 || props.block.next[0] !== 1;
+
+  if (isParentBlock) {
+  }
 
   return (
     <View style={[styles.line, isHoverAreaHovered && styles.line.hover]}>
@@ -230,19 +300,56 @@ function Line(props) {
         ]}
       >
         <TouchableOpacity
-          ref={iconRef}
+          ref={leftIconRef}
           style={[
             styles.line.hoverArea.add,
             isHoverAreaHovered && styles.line.hoverArea.add.visible,
-            isIconHovered && styles.line.hoverArea.add.hover,
+            isLeftIconHovered && styles.line.hoverArea.add.hover,
+            !isParentBlock && { display: 'none' },
           ]}
-          onPress={() => addTaskToList(props.blockId)}
+          onPress={() => addTaskLeft(props.block.id)}
+        >
+          <Entypo
+            name={'chevron-left'}
+            style={[
+              styles.line.hoverArea.add.icon,
+              isLeftIconHovered && styles.line.hoverArea.add.icon.hover,
+            ]}
+          />
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          ref={plusIconRef}
+          style={[
+            styles.line.hoverArea.add,
+            isHoverAreaHovered && styles.line.hoverArea.add.visible,
+            isPlusIconHovered && styles.line.hoverArea.add.hover,
+          ]}
+          onPress={() => addTaskDown(props.block.id)}
         >
           <Entypo
             name={'plus'}
             style={[
               styles.line.hoverArea.add.icon,
-              isIconHovered && styles.line.hoverArea.add.icon.hover,
+              isPlusIconHovered && styles.line.hoverArea.add.icon.hover,
+            ]}
+          />
+        </TouchableOpacity>
+        <TouchableOpacity
+          ref={righIconRef}
+          style={[
+            styles.line.hoverArea.add,
+            isHoverAreaHovered && styles.line.hoverArea.add.visible,
+            isRightIconHovered && styles.line.hoverArea.add.hover,
+            !isParentBlock && { display: 'none' },
+          ]}
+          onPress={() => addTaskRight(props.block.id)}
+        >
+          <Entypo
+            name={'chevron-right'}
+            style={[
+              styles.line.hoverArea.add.icon,
+              isRightIconHovered && styles.line.hoverArea.add.icon.hover,
             ]}
           />
         </TouchableOpacity>
@@ -405,10 +512,12 @@ const styles = StyleSheet.create({
     hoverArea: {
       position: 'absolute',
       display: 'flex',
+      flexDirection: 'row',
+      gap: 10,
       justifyContent: 'center',
       alignItems: 'center',
       height: 80,
-      width: 80,
+      width: 150,
       transitionProperty: 'height',
       transitionDuration: '250ms',
       hover: {
