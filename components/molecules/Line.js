@@ -193,7 +193,7 @@ const styles = StyleSheet.create({
     transitionProperty: 'min-height',
     transitionDuration: '250ms',
     hover: {
-      minHeight: 100,
+      minHeight: 75,
     },
     trunk: {
       position: 'absolute',
