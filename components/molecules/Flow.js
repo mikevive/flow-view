@@ -1,5 +1,10 @@
 import { createContext, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
+import {
+  DraxProvider,
+  DraxView,
+  DraxSnapbackTargetPreset,
+} from 'react-native-drax';
 
 import Line from './Line';
 import Main from './Main';
@@ -192,31 +197,45 @@ export default function Flow() {
 
   return (
     <FlowContext.Provider value={initialContextValue}>
-      <View
-        style={{
-          marginRight: 'auto',
-          marginLeft: 'auto',
-        }}
-      >
-        {flow.map((row, index) => (
-          <View
-            key={index}
-            style={{
-              display: 'flex',
-              flexDirection: 'row',
-            }}
-          >
-            {row.map((block, index) => (
-              <View key={index} style={{ marginLeft: 50, marginRight: 50 }}>
-                {!block && <None />}
-                {block?.type === 'DEFAULT' && <Task {...block} />}
-                {block?.type === 'MAIN' && <Main {...block} />}
-                {block && block.next.length !== 0 && <Line block={block} />}
-              </View>
-            ))}
-          </View>
-        ))}
-      </View>
+      <DraxProvider>
+        <DraxView
+          style={{ backgroundColor: 'red', width: 100, height: 100 }}
+          receptive={true}
+          onReceiveDragDrop={({ dragged: { payload } }) => {
+            payload?.test?.();
+            return DraxSnapbackTargetPreset.None;
+          }}
+        />
+        <View
+          style={{
+            marginRight: 'auto',
+            marginLeft: 'auto',
+          }}
+        >
+          {flow.map((row, index) => (
+            <View
+              key={index}
+              style={{
+                display: 'flex',
+                flexDirection: 'row',
+              }}
+            >
+              {row.map((block, index) => (
+                <View key={index} style={{ marginLeft: 50, marginRight: 50 }}>
+                  {!block && <None />}
+                  <DraxView
+                    dragPayload={{ test: () => console.log('dragged') }}
+                  >
+                    {block?.type === 'DEFAULT' && <Task {...block} />}
+                  </DraxView>
+                  {block?.type === 'MAIN' && <Main {...block} />}
+                  {block && block.next.length !== 0 && <Line block={block} />}
+                </View>
+              ))}
+            </View>
+          ))}
+        </View>
+      </DraxProvider>
     </FlowContext.Provider>
   );
 }
