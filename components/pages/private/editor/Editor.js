@@ -1,5 +1,5 @@
 import { Fragment } from 'react';
-import { StyleSheet, View, TouchableOpacity } from 'react-native';
+import { StyleSheet, View, Pressable } from 'react-native';
 
 import AsideInput from '../../../molecules/AsideInput';
 import Flow from '../../../molecules/Flow';
@@ -18,13 +18,13 @@ export default function Editor() {
           </Fragment>
         )}
       </View>
-      <TouchableOpacity
+      <Pressable
         style={styles.workspace}
         activeOpacity={1}
         onPress={() => console.log('click outside')}
       >
         <Flow />
-      </TouchableOpacity>
+      </Pressable>
     </Fragment>
   );
 }
