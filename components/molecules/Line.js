@@ -2,7 +2,7 @@ import { useRef, useContext } from 'react';
 import { StyleSheet, View, Pressable } from 'react-native';
 import { Entypo } from '@expo/vector-icons';
 import { useHover } from 'react-native-web-hooks';
-import { DraxView } from 'react-native-drax';
+import { DraxView, DraxViewDragStatus } from 'react-native-drax';
 
 import { FlowContext } from './Flow';
 import Task from './Task';
@@ -26,16 +26,23 @@ export default function Line(props) {
       <DraxView
         longPressDelay={100}
         dragPayload={{ test: () => console.log('dragged') }}
-        renderHoverContent={() => {
+        renderHoverContent={({ viewState }) => {
+          let combinedStyles = [
+            {
+              opacity: 0.5,
+              transform: [
+                { translateX: -110 },
+                { translateY: props.block.id === 0 ? 10 : -40 },
+              ],
+            },
+          ];
+
+          if (viewState.dragStatus === DraxViewDragStatus.Released) {
+            combinedStyles.push({ opacity: 0 });
+          }
+
           return (
-            <View
-              style={{
-                transform: [
-                  { translateX: -110 },
-                  { translateY: props.block.id === 0 ? 10 : -40 },
-                ],
-              }}
-            >
+            <View style={combinedStyles}>
               <Task id={null} />
             </View>
           );
