@@ -76,6 +76,7 @@ export default function Flow() {
     newFlow.splice(newTaskRowIndex, 0, newRow);
     setFlow(newFlow);
     setSelectedTask(newTask);
+    console.log(flow);
   };
 
   const addTaskLeft = (parentBlockId) => {
@@ -199,33 +200,119 @@ export default function Flow() {
     <FlowContext.Provider value={initialContextValue}>
       <DraxProvider>
         <DraxView
-          style={{ backgroundColor: 'red', width: 100, height: 100 }}
+          style={{
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            width: 50,
+            height: 80,
+          }}
           receptive={true}
           onReceiveDragDrop={({ dragged: { payload } }) => {
-            payload?.test?.();
+            console.log('dragged');
             return DraxSnapbackTargetPreset.None;
           }}
-        />
+        ></DraxView>
         <View
           style={{
             marginRight: 'auto',
             marginLeft: 'auto',
           }}
         >
-          {flow.map((row, index) => (
+          {flow.map((row, rowIndex) => (
             <View
-              key={index}
+              key={rowIndex}
               style={{
                 display: 'flex',
                 flexDirection: 'row',
-                zIndex: -index,
+                zIndex: -rowIndex,
+                justifyContent: 'center',
               }}
             >
-              {row.map((block, index) => (
-                <View key={index} style={{ marginLeft: 50, marginRight: 50 }}>
+              {row.map((block, blockIndex) => (
+                <View
+                  key={blockIndex}
+                  style={{
+                    marginLeft: 50,
+                    marginRight: 50,
+                  }}
+                >
                   {!block && <None />}
                   {block?.type === 'MAIN' && <Main {...block} />}
-                  {block?.type === 'TASK' && <Task {...block} />}
+                  {block?.type === 'TASK' && (
+                    <View
+                      key={blockIndex}
+                      style={{
+                        display: 'flex',
+                        flexDirection: 'row',
+                      }}
+                    >
+                      <DraxView
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'center',
+                          alignItems: 'center',
+                          width: 50,
+                          height: 80,
+                          transform: [
+                            { translateY: rowIndex === 1 ? -70 : -25 },
+                          ],
+                        }}
+                        receptive={true}
+                        onReceiveDragDrop={({ dragged: { payload } }) => {
+                          const blockId = payload?.blockId;
+                          console.log('dragged:');
+                          console.log(blockId);
+                          if (blockId) addTaskLeft(blockId);
+                          return DraxSnapbackTargetPreset.None;
+                        }}
+                      >
+                        <View
+                          style={{
+                            backgroundColor: 'blue',
+                            width: 10,
+                            height: 80,
+                            transform: [
+                              { translateY: rowIndex === 1 ? 70 : 25 },
+                            ],
+                          }}
+                        ></View>
+                      </DraxView>
+                      <Task {...block} />
+                      <DraxView
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'center',
+                          alignItems: 'center',
+                          width: 50,
+                          height: 80,
+
+                          transform: [
+                            { translateY: rowIndex === 1 ? -70 : -25 },
+                          ],
+                        }}
+                        receptive={true}
+                        onReceiveDragDrop={({ dragged: { payload } }) => {
+                          const blockId = payload?.blockId;
+                          console.log('dragged:');
+                          console.log(blockId);
+                          if (blockId) addTaskRight(blockId);
+                          return DraxSnapbackTargetPreset.None;
+                        }}
+                      >
+                        <View
+                          style={{
+                            backgroundColor: 'blue',
+                            width: 10,
+                            height: 80,
+                            transform: [
+                              { translateY: rowIndex === 1 ? 70 : 25 },
+                            ],
+                          }}
+                        ></View>
+                      </DraxView>
+                    </View>
+                  )}
                   {block && block.next.length !== 0 && <Line block={block} />}
                 </View>
               ))}

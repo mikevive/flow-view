@@ -25,7 +25,7 @@ export default function Line(props) {
       <View style={[styles.line.circle, styles.line.circle.bottom]}></View>
       <DraxView
         longPressDelay={100}
-        dragPayload={{ test: () => console.log('dragged') }}
+        dragPayload={{ blockId: props.block.id }}
         renderHoverContent={({ viewState }) => {
           let combinedStyles = [
             {
